@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
-from app import db
+from app import db, dash_app
+
+import dash_html_components as html
 
 main = Blueprint('main', __name__)
 

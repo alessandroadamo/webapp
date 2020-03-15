@@ -1,10 +1,10 @@
+from app import app
 from flask import Blueprint, render_template, redirect, url_for, request, flash
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models.auth import User
 
 from app import db
-
 
 auth = Blueprint('auth', __name__)
 
@@ -26,9 +26,11 @@ def login_post():
     # take the user supplied password, hash it, and compare it to the hashed password in database
     if not user or not check_password_hash(user.password, password):
         flash('Please check your login details and try again.')
+        app.logger.info('%s failed to log in', user.name)
         return redirect(url_for('auth.login'))  # if user doesn't exist or password is wrong, reload the page
 
     login_user(user, remember=remember)
+    app.logger.info('%s logged in successfully', user.name)
     return redirect(url_for('main.profile'))
 
 
@@ -45,10 +47,10 @@ def signup_post():
     confirmation_password = request.form.get('confirmation_password')
 
     if password != confirmation_password:
-        flash('Confirmation password mismatch. Please reenter signup data.')
+        flash('Confirmation password mismatch. Please re-enter signup data.')
         return redirect(url_for('auth.signup'))
 
-    user = User.query.filter_by(email=email).first()  # if this returns a user, then the email already exists in database
+    user = User.query.filter_by(email=email).first()
 
     if user:  # if a user is found, we want to redirect back to signup page so user can try again
         flash('Email address already exists')
@@ -62,12 +64,16 @@ def signup_post():
     # add the new user to the database
     db.session.add(new_user)
     db.session.commit()
+
+    app.logger.info('user %s created successfully', user.name)
     return redirect(url_for('auth.login'))
 
 
 @auth.route('/logout')
 @login_required
 def logout():
+    app.logger.info('user %s logged out', current_user.name)
     logout_user()
     return redirect(url_for('main.index'))
+
 
